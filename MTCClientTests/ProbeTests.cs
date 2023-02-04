@@ -25,7 +25,7 @@ public class UnitTest1
             .Respond("application/xml", probeDoc.InnerXml);
 
         mockHttp.When($"{url}/current")
-            .Respond("appllication/xml", currentDoc.InnerXml);
+            .Respond("application/xml", currentDoc.InnerXml);
 
         var mtconnectClient = new MTConnectClientTest(mockHttp, url);
 
