@@ -40,7 +40,7 @@ namespace MTConnectSharp
                 if(string.IsNullOrEmpty(_agentUri) || (!string.Equals(_agentUri, value)))
                 {
                     _agentUri = value;
-                    CreateRestClient();
+                    _restClient = CreateRestClient();
                 }
             }
         }
@@ -95,13 +95,13 @@ namespace MTConnectSharp
         /// </summary>
         private RestClient _restClient = null;
 
-        private void CreateRestClient()
+        protected virtual RestClient CreateRestClient()
         {
             var options = new RestClientOptions(_agentUri) {
                 ThrowOnAnyError = false,
                 MaxTimeout = 5000
             };
-            _restClient = new RestClient(options);
+            return new RestClient(options);
         }
         
         /// <summary>
