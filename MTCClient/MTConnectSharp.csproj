@@ -10,4 +10,10 @@
     <PackageReference Include="RestSharp" Version="108.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+    <_Parameter1>MTCClientTests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>

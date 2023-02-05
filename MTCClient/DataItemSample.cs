@@ -10,12 +10,12 @@ namespace MTConnectSharp
 		/// <summary>
 		/// The value of the sample
 		/// </summary>
-		public string Value { get; init; }
+		public string Value { get; private set; }
 
 		/// <summary>
 		/// The timestamp of the sample
 		/// </summary>
-		public DateTime TimeStamp { get; init; }
+		public DateTime TimeStamp { get; private set; }
 
         /// <summary>
         /// Flag for client application to use to track if sample has been processed.
@@ -25,7 +25,7 @@ namespace MTConnectSharp
 		/// <summary>
         /// Sequence number from the MTConnect Stream
         /// </summary>
-		public string Sequence { get; init; }
+		public string Sequence { get; private set; }
 
 		/// <summary>
 		/// Creates a new sample
