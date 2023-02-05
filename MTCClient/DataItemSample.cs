@@ -10,33 +10,34 @@ namespace MTConnectSharp
 		/// <summary>
 		/// The value of the sample
 		/// </summary>
-		public string Value { get; set; }
+		public string Value { get; init; }
 
 		/// <summary>
 		/// The timestamp of the sample
 		/// </summary>
-		public DateTime TimeStamp { get; set; }
+		public DateTime TimeStamp { get; init; }
+
+        /// <summary>
+        /// Flag for client application to use to track if sample has been processed.
+        /// </summary>
+		public bool Processed { get; set; } = false;
 
 		/// <summary>
-		/// Creates a new sample with the current time as the timestamp
-		/// </summary>
-		/// <param name="value">Value of the sample</param>
-		internal DataItemSample(string value)
-		{
-			TimeStamp = DateTime.Now;
-			Value = value;
-		}
+        /// Sequence number from the MTConnect Stream
+        /// </summary>
+		public string Sequence { get; init; }
 
 		/// <summary>
 		/// Creates a new sample
 		/// </summary>
 		/// <param name="value">Value of the sample</param>
 		/// <param name="timestamp">Timestamp of the sample</param>
-		internal DataItemSample(string value, DateTime timestamp)
+		internal DataItemSample(string value, DateTime timestamp, string sequence)
 		{
 			TimeStamp = timestamp;
 			Value = value;
-		}
+            Sequence = sequence;
+        }
 
 		/// <summary>
 		/// Returns the Value
