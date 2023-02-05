@@ -20,11 +20,26 @@ namespace MTConnectSharp
         /// </summary>
         public event EventHandler? ProbeCompleted;
 
+        private string _agentUri = string.Empty;
         /// <summary>
         /// The base uri of the agent
         /// </summary>
-        public string AgentUri { get; set; } = string.Empty;
-
+        public string AgentUri
+        {
+            get { return _agentUri; }
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    throw new ArgumentNullException();
+                }
+                if (string.IsNullOrEmpty(_agentUri) || (!string.Equals(_agentUri, value)))
+                {
+                    _agentUri = value;
+                    _restClient = CreateRestClient();
+                }
+            }
+        }
         /// <summary>
         /// Time in milliseconds between sample queries when simulating a streaming connection
         /// </summary>
@@ -49,6 +64,16 @@ namespace MTConnectSharp
         /// RestSharp RestClient
         /// </summary>
         private RestClient? _restClient;
+
+        protected virtual RestClient CreateRestClient()
+        {
+            var options = new RestClientOptions(_agentUri)
+            {
+                ThrowOnAnyError = false,
+                MaxTimeout = 5000
+            };
+            return new RestClient(options);
+        }
 
         /// <summary>
         /// Not actually parsing multipart stream - this timer fires sample queries to simulate streaming
