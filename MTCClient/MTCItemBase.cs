@@ -5,20 +5,20 @@
    /// </summary>
    public abstract class MTCItemBase
 	{
-		/// <summary>
-		/// Value of the id attribute
-		/// </summary>
-		public string Id { get; set; }
+        /// <summary>
+        /// Value of the id attribute
+        /// </summary>
+        public string Id { get; set; } = string.Empty;
 
-		/// <summary>
-		/// Value of the name attribute
-		/// </summary>
-		public string Name { get; set; }
+        /// <summary>
+        /// Value of the name attribute
+        /// </summary>
+        public string Name { get; set; } = string.Empty;
 
-		/// <summary>
-		/// Name and id of the item as a formatted string
-		/// </summary>
-		public string LongName
+        /// <summary>
+        /// Name and id of the item as a formatted string
+        /// </summary>
+        public string LongName
 		{
 			get
 			{
@@ -37,8 +37,8 @@
 			}
 			catch
 			{
-				return base.ToString();
-			}
+                return base.ToString() ?? string.Empty;
+            }
 		}
 	}
 }

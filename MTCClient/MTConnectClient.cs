@@ -17,12 +17,12 @@ namespace MTConnectSharp
         /// <summary>
         /// The probe response has been recieved and parsed
         /// </summary>
-        public event EventHandler ProbeCompleted;
+        public event EventHandler? ProbeCompleted;
 
         /// <summary>
         /// The base uri of the agent
         /// </summary>
-        public string AgentUri { get; set; }
+        public string AgentUri { get; set; } = string.Empty;
 
         /// <summary>
         /// Time in milliseconds between sample queries when simulating a streaming connection
@@ -47,12 +47,12 @@ namespace MTConnectSharp
         /// <summary>
         /// RestSharp RestClient
         /// </summary>
-        private RestClient _restClient;
+        private RestClient? _restClient;
 
         /// <summary>
         /// Not actually parsing multipart stream - this timer fires sample queries to simulate streaming
         /// </summary>
-        private Timer _streamingTimer;
+        private Timer? _streamingTimer;
 
         /// <summary>
         /// Last sequence number read from current or sample
@@ -95,7 +95,7 @@ namespace MTConnectSharp
         /// </summary>
         public void StopStreaming()
         {
-            _streamingTimer.Stop();
+            _streamingTimer?.Stop();
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace MTConnectSharp
         /// </summary>
         public void GetCurrentState()
         {
-            if (!_probeCompleted)
+            if (!_probeCompleted || _restClient == null)
             {
                 throw new InvalidOperationException("Cannot get DataItem values. Agent has not been probed yet.");
             }
@@ -154,6 +154,9 @@ namespace MTConnectSharp
         /// <param name="response">An IRestResponse from a probe command</param>
         private void ParseProbeResponse(RestResponse response)
         {
+            if(response == null || string.IsNullOrEmpty(response.Content))
+                return;
+
             var xdoc = XDocument.Load(new StringReader(response.Content));
             if (_devices.Any())
                 _devices.Clear();
@@ -200,8 +203,12 @@ namespace MTConnectSharp
             return dataItems;
         }
 
-        private void StreamingTimerElapsed(object sender, ElapsedEventArgs e)
+        private void StreamingTimerElapsed(object? sender, ElapsedEventArgs e)
         {
+            if(_restClient == null)
+            {
+                throw new InvalidOperationException("Probe must be completed before streaming can occur");
+            }
             var request = new RestRequest
             {
                 Resource = "sample"
@@ -217,12 +224,15 @@ namespace MTConnectSharp
         /// <param name="response">IRestResponse from the MTConnect request</param>
         private void ParseStream(RestResponse response)
         {
+            if(response == null || string.IsNullOrEmpty(response.Content))
+                return;
+
             using (StringReader sr = new StringReader(response.Content))
             {
                 var xdoc = XDocument.Load(sr);
 
-                _lastSequence = Convert.ToInt64(xdoc.Descendants().First(e => e.Name.LocalName == "Header")
-                   .Attribute("lastSequence").Value);
+                var header = xdoc.Descendants().First(e => e.Name.LocalName == "Header");
+                _lastSequence = Convert.ToInt64(header.GetAttribute("lastSequence"));
 
                 var xmlDataItems = xdoc.Descendants()
                    .Where(e => e.Attributes().Any(a => a.Name.LocalName == "dataItemId"));
@@ -230,9 +240,8 @@ namespace MTConnectSharp
                 {
                     var dataItems = xmlDataItems.Select(e => new
                     {
-                        id = e.Attribute("dataItemId").Value,
-                        timestamp = DateTime.Parse(e.Attribute("timestamp").Value, null,
-                          System.Globalization.DateTimeStyles.RoundtripKind),
+                        id = e.GetAttribute("dataItemId"),
+                        timestamp = DateTime.Parse(e.GetAttribute("timestamp"), null, System.Globalization.DateTimeStyles.RoundtripKind),
                         value = e.Value
                     })
                     .OrderBy(i => i.timestamp)
