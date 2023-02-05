@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 using System.Xml.Linq;
 
@@ -52,7 +53,7 @@ namespace MTConnectSharp
         /// <summary>
         /// Not actually parsing multipart stream - this timer fires sample queries to simulate streaming
         /// </summary>
-        private Timer? _streamingTimer;
+        private Timer? _samplingTimer;
 
         /// <summary>
         /// Last sequence number read from current or sample
@@ -73,35 +74,44 @@ namespace MTConnectSharp
             Devices = new ReadOnlyObservableCollection<Device>(_devices);
         }
 
+        public Task StartStreamingAsync()
+        {
+            throw new NotImplementedException();
+        }
+        public void StopStreaming()
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Starts sample polling and updating DataItem values as they change
         /// </summary>
-        public void StartStreaming()
+        public async Task StartSamplingAsync()
         {
-            if (_streamingTimer?.Enabled == true)
+            if (_samplingTimer?.Enabled == true)
             {
                 return;
             }
 
-            GetCurrentState();
+            await GetCurrentStateAsync();
 
-            _streamingTimer = new Timer(UpdateInterval.TotalMilliseconds);
-            _streamingTimer.Elapsed += StreamingTimerElapsed;
-            _streamingTimer.Start();
+            _samplingTimer = new Timer(UpdateInterval.TotalMilliseconds);
+            _samplingTimer.Elapsed += StreamingTimerElapsed;
+            _samplingTimer.Start();
         }
 
         /// <summary>
         /// Stops sample polling
         /// </summary>
-        public void StopStreaming()
+        public void StopSampling()
         {
-            _streamingTimer?.Stop();
+            _samplingTimer?.Stop();
         }
 
         /// <summary>
         /// Gets current response and updates DataItems
         /// </summary>
-        public void GetCurrentState()
+        public async Task GetCurrentStateAsync()
         {
             if (!_probeCompleted || _restClient == null)
             {
@@ -112,14 +122,14 @@ namespace MTConnectSharp
             {
                 Resource = "current"
             };
-            var response = _restClient.ExecuteAsync(request).Result;
+            var response = await _restClient.ExecuteAsync(request).ConfigureAwait(false);
             ParseStream(response);
         }
 
         /// <summary>
         /// Gets probe response from the agent and populates the devices collection
         /// </summary>
-        public void Probe()
+        public async Task ProbeAsync()
         {
             if (_probeStarted && !_probeCompleted)
             {
@@ -138,7 +148,7 @@ namespace MTConnectSharp
             try
             {
                 _probeStarted = true;
-                var response = _restClient.ExecuteAsync(request).Result;
+                var response = await _restClient.ExecuteAsync(request).ConfigureAwait(false);
                 ParseProbeResponse(response);
             }
             catch (Exception ex)
@@ -267,7 +277,7 @@ namespace MTConnectSharp
         /// </summary>
         public void Dispose()
         {
-            _streamingTimer?.Dispose();
+            _samplingTimer?.Dispose();
         }
     }
 }

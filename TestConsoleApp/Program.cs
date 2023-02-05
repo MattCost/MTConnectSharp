@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading.Tasks;
 using Terminal.Gui;
 
 namespace TestConsoleApp
@@ -90,7 +91,7 @@ namespace TestConsoleApp
             }
         }
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Console.WriteLine("Hello World!");
             var client = new MTConnectSharp.MTConnectClient()
@@ -99,7 +100,7 @@ namespace TestConsoleApp
                 UpdateInterval = TimeSpan.FromSeconds(.5)
             };
 
-            client.ProbeCompleted += (sender, info) =>
+            client.ProbeCompleted += async (sender, info) =>
             {
                 var items = client.Devices
                    .SelectMany(d => d.DataItems.Select(i => new { d = d.LongName, i = i.LongName }))
@@ -107,7 +108,7 @@ namespace TestConsoleApp
 
                 Console.WriteLine($"Number of DataItems: {items.Count()}");
 
-                client.StartStreaming();
+                await client.StartSamplingAsync();
             };
 
             AddHelloGoodbye<MTConnectSharp.Device>(
@@ -143,7 +144,7 @@ namespace TestConsoleApp
             });
 
             Attach(client.Devices);
-            client.Probe();
+            await client.ProbeAsync();
 
             Application.Run();
         }
