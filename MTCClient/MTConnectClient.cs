@@ -41,9 +41,9 @@ namespace MTConnectSharp
             }
         }
         /// <summary>
-        /// Time in milliseconds between sample queries when simulating a streaming connection
+        /// Time between sample queries when using Sampling mode. Default is 2.0 seconds.
         /// </summary>
-        public TimeSpan UpdateInterval { get; set; }
+        public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromSeconds(2);
 
         /// <summary>
         /// Devices on the connected agent
@@ -93,16 +93,23 @@ namespace MTConnectSharp
         /// </summary>
         public MTConnectClient()
         {
-            UpdateInterval = TimeSpan.FromMilliseconds(2000);
-
             _devices = new ObservableCollection<Device>();
             Devices = new ReadOnlyObservableCollection<Device>(_devices);
         }
 
+        /// <summary>
+        /// Start MTConnect Streaming mode, not yet implemented. Will throw NotImplementedException
+        /// </summary>
+        /// <exception cref="NotImplementedException">Thrown always</exception>
         public Task StartStreamingAsync()
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Stop MTConnect Streaming mode, not yet implemented. Will throw NotImplementedException
+        /// </summary>
+        /// <exception cref="NotImplementedException">Thrown always</exception>
         public void StopStreaming()
         {
             throw new NotImplementedException();
@@ -140,83 +147,113 @@ namespace MTConnectSharp
         {
             if (!_probeCompleted || _restClient == null)
             {
-                throw new InvalidOperationException("Cannot get DataItem values. Agent has not been probed yet.");
+                throw new InvalidOperationException("Cannot get DataItem values. Agent has not been probed yet. Set AgentUri, and call ProbeAsync first");
             }
 
             var request = new RestRequest
             {
                 Resource = "current"
             };
+
+            //TODO add support for mtconnect json
+            request.AddHeader("Accept", "application/accepts=xml");
+
             var response = await _restClient.ExecuteAsync(request).ConfigureAwait(false);
+
+            if (response.ResponseStatus == ResponseStatus.Completed)
+            {
+                throw new GetCurrentStateFailedException($"get /current request failed to complete for {AgentUri}.");
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                throw new GetCurrentStateFailedException($"get /current request completed, but status code did not indicate success. Status Code: {response.StatusCode}");
+            }
+
             ParseStream(response);
         }
 
         /// <summary>
         /// Gets probe response from the agent and populates the devices collection
         /// </summary>
+        /// <remarks>
+        /// AgentUri must be set before calling ProbeAsync. 
+        /// Only 1 Probe may be active a time.
+        /// If ProbeAsync is called without an AgentUri, or multiple times, an InvalidOperationException will be thrown
+        /// Set an Event Handler on ProbeComplete() to be notified when the Probe Operation finishes.
+        /// A ProbeFailedException will be thrown if there are any problems with the request, or a non-success response is received from the agent.
+        /// A ParseResultException will be thrown if there are any problems parsing the xml response.
+        /// </remarks>
+        /// <returns>A Task representing the async Probe request</returns>
+        /// <exception cref="InvalidOperationException">Thrown if client is in invalid state for probing.</exception>
+        /// <exception cref="ProbeFailedException">Thrown if the client is unable to connect to the agent</exception>
+        /// <exception cref="ParseResponseException">Thrown if the client is unable to parse the response from the agent</exception>
         public async Task ProbeAsync()
         {
+            if (_restClient == null)
+            {
+                throw new InvalidOperationException("Must set AgentUri before calling ProbeAsync");
+            }
             if (_probeStarted && !_probeCompleted)
             {
                 throw new InvalidOperationException("Cannot start a new Probe when one is still running.");
             }
-
-            var options = new RestClientOptions(AgentUri);
-
-            _restClient = new RestClient(options);
 
             var request = new RestRequest
             {
                 Resource = "probe"
             };
 
+            _probeStarted = true;
+            _probeCompleted = false;
+            //clear _devices
+            //clear dictionary
+
+            var response = await _restClient.ExecuteAsync(request).ConfigureAwait(false);
+
+            if (response.ResponseStatus != ResponseStatus.Completed)
+            {
+                _probeStarted = false;
+                throw new ProbeFailedException($"Probe request failed to complete for Agent Uri: {AgentUri}.");
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _probeStarted = false;
+                throw new ProbeFailedException($"Probe request completed, but response did not indicate success. Response code: {response.StatusCode}");
+            }
+
+            if (response.Content == null || string.IsNullOrEmpty(response.Content))
+            {
+                _probeStarted = false;
+                throw new ProbeFailedException($"Probe request completed, but response Content was empty");
+            }
+
             try
             {
-                _probeStarted = true;
-                var response = await _restClient.ExecuteAsync(request).ConfigureAwait(false);
-                ParseProbeResponse(response);
+                var xmlDoc = XDocument.Load(new StringReader(response.Content));
+                if (_devices.Any())
+                    _devices.Clear();
+
+                _devices.AddRange(xmlDoc.Descendants()
+                   .Where(d => d.Name.LocalName == "Devices")
+                   .Take(1) // needed? 
+                   .SelectMany(d => d.Elements())
+                   .Select(d => new Device(d)));
+
+                // BuildDataItemDictionary();
+                _dataItemsDictionary = _devices.SelectMany(d =>
+                    d.DataItems.Concat(GetAllDataItems(d.Components))).ToDictionary(i => i.Id, i => i);
+
+                _probeCompleted = true;
+                _probeStarted = false;
+                ProbeCompletedHandler();
             }
             catch (Exception ex)
             {
                 _probeStarted = false;
-                throw new Exception("Probe request failed.\nAgent Uri: " + AgentUri, ex);
+                throw new ParseResponseException("Unexpected error while parsing Probe response. See inner exception for details", ex);
             }
-        }
-
-        /// <summary>
-        /// Parses IRestResponse from a probe command into a Device collection
-        /// </summary>
-        /// <param name="response">An IRestResponse from a probe command</param>
-        private void ParseProbeResponse(RestResponse response)
-        {
-            if(response == null || string.IsNullOrEmpty(response.Content))
-                return;
-
-            var xdoc = XDocument.Load(new StringReader(response.Content));
-            if (_devices.Any())
-                _devices.Clear();
-
-            _devices.AddRange(xdoc.Descendants()
-               .Where(d => d.Name.LocalName == "Devices")
-               .Take(1) // needed? 
-               .SelectMany(d => d.Elements())
-               .Select(d => new Device(d)));
-
-            BuildDataItemDictionary();
-
-            _probeCompleted = true;
-            _probeStarted = false;
-            ProbeCompletedHandler();
-        }
-
-        /// <summary>
-        /// Loads DataItemRefList with all data items from all devices
-        /// </summary>
-        private void BuildDataItemDictionary()
-        {
-            _dataItemsDictionary = _devices.SelectMany(d =>
-               d.DataItems.Concat(GetAllDataItems(d.Components))
-            ).ToDictionary(i => i.Id, i => i);
         }
 
         /// <summary>
@@ -240,7 +277,7 @@ namespace MTConnectSharp
 
         private void StreamingTimerElapsed(object? sender, ElapsedEventArgs e)
         {
-            if(_restClient == null)
+            if (_restClient == null)
             {
                 throw new InvalidOperationException("Probe must be completed before streaming can occur");
             }
@@ -259,36 +296,45 @@ namespace MTConnectSharp
         /// <param name="response">IRestResponse from the MTConnect request</param>
         private void ParseStream(RestResponse response)
         {
-            if(response == null || string.IsNullOrEmpty(response.Content))
-                return;
-
-            using (StringReader sr = new StringReader(response.Content))
+            if (response == null || string.IsNullOrEmpty(response.Content))
             {
-                var xdoc = XDocument.Load(sr);
+                throw new ParseResponseException("response or response.Content was null. Nothing to parse");
+            }
 
-                var header = xdoc.Descendants().First(e => e.Name.LocalName == "Header");
-                _lastSequence = Convert.ToInt64(header.GetAttribute("lastSequence"));
-
-                var xmlDataItems = xdoc.Descendants()
-                   .Where(e => e.Attributes().Any(a => a.Name.LocalName == "dataItemId"));
-                if (xmlDataItems.Any())
+            try
+            {
+                using (StringReader sr = new StringReader(response.Content))
                 {
-                    var dataItems = xmlDataItems.Select(e => new
-                    {
-                        id = e.GetAttribute("dataItemId"),
-                        timestamp = DateTime.Parse(e.GetAttribute("timestamp"), null, System.Globalization.DateTimeStyles.RoundtripKind),
-                        value = e.Value
-                    })
-                    .OrderBy(i => i.timestamp)
-                    .ToList();
+                    var xDoc = XDocument.Load(sr);
 
-                    foreach (var item in dataItems)
+                    var header = xDoc.Descendants().First(e => e.Name.LocalName == "Header");
+                    _lastSequence = Convert.ToInt64(header.GetAttribute("lastSequence"));
+
+                    var xmlDataItems = xDoc.Descendants()
+                       .Where(e => e.Attributes().Any(a => a.Name.LocalName == "dataItemId"));
+                    if (xmlDataItems.Any())
                     {
-                        var dataItem = _dataItemsDictionary[item.id];
-                        var sample = new DataItemSample(item.value.ToString(), item.timestamp);
-                        dataItem.AddSample(sample);
+                        var dataItems = xmlDataItems.Select(e => new
+                        {
+                            id = e.GetAttribute("dataItemId"),
+                            timestamp = DateTime.Parse(e.GetAttribute("timestamp"), null, System.Globalization.DateTimeStyles.RoundtripKind),
+                            value = e.Value
+                        })
+                        .OrderBy(i => i.timestamp)
+                        .ToList();
+
+                        foreach (var item in dataItems)
+                        {
+                            var dataItem = _dataItemsDictionary[item.id];
+                            var sample = new DataItemSample(item.value.ToString(), item.timestamp);
+                            dataItem.AddSample(sample);
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                throw new ParseResponseException("Unexpected error while parsing response. See inner exception for details.", ex);
             }
         }
 
