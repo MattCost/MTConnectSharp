@@ -29,6 +29,8 @@ namespace MTConnectSharp
             get { return _agentUri; }
             set
             {
+                // TODO make setter private, and add SetAgentUri method? 
+                // TODO throw if AgentUri is changed while sampling/streaming are active
                 if (string.IsNullOrEmpty(value))
                 {
                     throw new ArgumentNullException();
@@ -36,6 +38,7 @@ namespace MTConnectSharp
                 if (string.IsNullOrEmpty(_agentUri) || (!string.Equals(_agentUri, value)))
                 {
                     _agentUri = value;
+                    _restClient?.Dispose();
                     _restClient = CreateRestClient();
                 }
             }
