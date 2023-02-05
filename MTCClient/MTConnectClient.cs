@@ -16,9 +16,14 @@ namespace MTConnectSharp
     public class MTConnectClient : IMTConnectClient, IDisposable
     {
         /// <summary>
-        /// The probe response has been recieved and parsed
+        /// The probe response has been received and parsed
         /// </summary>
         public event EventHandler? ProbeCompleted;
+
+        /// <summary>
+        /// A Current or Sample response has been parsed, and new DataItems are available.
+        /// </summary>
+        public event EventHandler? DataItemsChanged;
 
         private string _agentUri = string.Empty;
         /// <summary>
@@ -62,6 +67,20 @@ namespace MTConnectSharp
         /// Dictionary Reference to all data items by id for better performance when streaming
         /// </summary>
         private Dictionary<string, DataItem> _dataItemsDictionary = new Dictionary<string, DataItem>();
+
+        private ReadOnlyDictionary<string, DataItem>? _readOnlyDataItemsDictionary = null;
+
+        /// <summary>
+        /// Dictionary containing all Data Items available from the MTConnect stream.
+        /// </summary>
+        public ReadOnlyDictionary<string, DataItem> DataItemsDictionary
+        {
+            get
+            {
+                return _readOnlyDataItemsDictionary ??= new ReadOnlyDictionary<string, DataItem>(_dataItemsDictionary);
+            }
+        }
+
 
         /// <summary>
         /// RestSharp RestClient
@@ -248,6 +267,9 @@ namespace MTConnectSharp
                 _dataItemsDictionary = _devices.SelectMany(d =>
                     d.DataItems.Concat(GetAllDataItems(d.Components))).ToDictionary(i => i.Id, i => i);
 
+                 // Set to null to force rebuild on next get.
+                _readOnlyDataItemsDictionary = null;
+
                 _probeCompleted = true;
                 _probeStarted = false;
                 ProbeCompletedHandler();
@@ -321,7 +343,8 @@ namespace MTConnectSharp
                         {
                             id = e.GetAttribute("dataItemId"),
                             timestamp = DateTime.Parse(e.GetAttribute("timestamp"), null, System.Globalization.DateTimeStyles.RoundtripKind),
-                            value = e.Value
+                            value = e.Value,
+                            sequence = e.GetAttribute("sequence")
                         })
                         .OrderBy(i => i.timestamp)
                         .ToList();
@@ -329,9 +352,11 @@ namespace MTConnectSharp
                         foreach (var item in dataItems)
                         {
                             var dataItem = _dataItemsDictionary[item.id];
-                            var sample = new DataItemSample(item.value.ToString(), item.timestamp);
+                            var sample = new DataItemSample(item.value.ToString(), item.timestamp, item.sequence);
                             dataItem.AddSample(sample);
                         }
+
+                        DataItemsChangedHandler();
                     }
                 }
             }
@@ -340,7 +365,10 @@ namespace MTConnectSharp
                 throw new ParseResponseException("Unexpected error while parsing response. See inner exception for details.", ex);
             }
         }
-
+        private void DataItemsChangedHandler()
+        {
+            DataItemsChanged?.Invoke(this, new EventArgs());
+        }
         private void ProbeCompletedHandler()
         {
             ProbeCompleted?.Invoke(this, new EventArgs());
