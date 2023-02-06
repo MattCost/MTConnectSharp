@@ -209,7 +209,7 @@ namespace MTConnectSharp
         /// <returns>A Task representing the async Probe request</returns>
         /// <exception cref="InvalidOperationException">Thrown if client is in invalid state for probing.</exception>
         /// <exception cref="ProbeFailedException">Thrown if the client is unable to connect to the agent</exception>
-        /// <exception cref="ParseResponseException">Thrown if the client is unable to parse the response from the agent</exception>
+        /// <exception cref="ParseXMLException">Thrown if the client is unable to parse the response from the agent</exception>
         public async Task ProbeAsync()
         {
             if (_restClient == null)
@@ -277,7 +277,7 @@ namespace MTConnectSharp
             catch (Exception ex)
             {
                 _probeStarted = false;
-                throw new ParseResponseException("Unexpected error while parsing Probe response. See inner exception for details", ex);
+                throw new ParseXMLException("Unexpected error while parsing Probe response. See inner exception for details", ex);
             }
         }
 
@@ -323,7 +323,7 @@ namespace MTConnectSharp
         {
             if (response == null || string.IsNullOrEmpty(response.Content))
             {
-                throw new ParseResponseException("response or response.Content was null. Nothing to parse");
+                throw new ParseXMLException("response or response.Content was null. Nothing to parse");
             }
 
             try
@@ -362,7 +362,7 @@ namespace MTConnectSharp
             }
             catch (Exception ex)
             {
-                throw new ParseResponseException("Unexpected error while parsing response. See inner exception for details.", ex);
+                throw new ParseXMLException("Unexpected error while parsing response. See inner exception for details.", ex);
             }
         }
         private void DataItemsChangedHandler()

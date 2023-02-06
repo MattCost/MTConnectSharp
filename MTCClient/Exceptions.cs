@@ -22,11 +22,11 @@ namespace MTConnectSharp
         public StartSamplingFailedException(string message, Exception innerException) : base(message, innerException) { }
 
     }
-    public class ParseResponseException : Exception
+    public class ParseXMLException : Exception
     {
-        public ParseResponseException() : base() { }
-        public ParseResponseException(string message) : base(message) { }
-        public ParseResponseException(string message, Exception innerException) : base(message, innerException) { }
+        public ParseXMLException() : base() { }
+        public ParseXMLException(string message) : base(message) { }
+        public ParseXMLException(string message, Exception innerException) : base(message, innerException) { }
 
     }
 }
