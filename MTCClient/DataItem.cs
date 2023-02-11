@@ -54,7 +54,7 @@ namespace MTConnectSharp
             get
             {
                 if (_dataItemSamples.Count >= 2)
-                    return _dataItemSamples.Skip(Math.Max(1, _dataItemSamples.Count - 1)).First();
+                    return _dataItemSamples.TakeLast(2).First();
                 throw new InvalidOperationException("SampleHistory only has 1 sample.");
             }
         }
