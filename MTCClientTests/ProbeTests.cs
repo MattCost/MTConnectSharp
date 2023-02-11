@@ -16,7 +16,7 @@ public class ProbeTests : IClassFixture<MTCClientFixture>
     [Fact]
     public async void ProbeWorks()
     {
-        var client = _fixture.ClientBuilder.Build(MTCClientFixture.ProbeWorksUrl);
+        var client = _fixture.ClientBuilder.Build(MTCClientFixture.ProbeAndCurrentWorkUrl);
 
         client.ProbeCompleted += (sender, e) =>
         {

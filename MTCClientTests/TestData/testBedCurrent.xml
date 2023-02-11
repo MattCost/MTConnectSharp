@@ -6,7 +6,7 @@
     <DeviceStream name="GFAgie01" uuid="mtc_adapter001">
       <ComponentStream component="Device" name="GFAgie01" componentId="GFAgie01">
         <Events>
-          <Availability dataItemId="GFAgie01-dtop_1" timestamp="2022-11-08T22:58:55.365335" name="avail" sequence="731812358">UNAVAILABLE</Availability>
+          <Availability dataItemId="GFAgie01-dtop_1" timestamp="2022-11-08T22:58:55.365335" name="avail" sequence="731812358">Hello World</Availability>
           <EmergencyStop dataItemId="GFAgie01-dtop_2" timestamp="2022-11-08T22:58:55.364174" name="estop" sequence="731812348">UNAVAILABLE</EmergencyStop>
           <AssetChanged dataItemId="GFAgie01_asset_chg" timestamp="2022-11-08T22:58:55.365192" sequence="731812356" assetType="">UNAVAILABLE</AssetChanged>
           <AssetRemoved dataItemId="GFAgie01_asset_rem" timestamp="2022-11-08T22:58:55.365261" sequence="731812357" assetType="">UNAVAILABLE</AssetRemoved>

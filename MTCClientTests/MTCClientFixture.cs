@@ -20,14 +20,14 @@ namespace MTCClientTests
             // Probe Works
             var mockHttp = new MockHttpMessageHandler();
 
-            mockHttp.When($"{ProbeWorksUrl}/probe")
+            mockHttp.When($"{ProbeAndCurrentWorkUrl}/probe")
                 .Respond("application/xml", probeDoc.InnerXml);
 
-            mockHttp.When($"{ProbeWorksUrl}/current")
+            mockHttp.When($"{ProbeAndCurrentWorkUrl}/current")
                 .Respond("application/xml", currentDoc.InnerXml);
 
 
-            ClientBuilder.AddHttpMessageHandler(ProbeWorksUrl, mockHttp);
+            ClientBuilder.AddHttpMessageHandler(ProbeAndCurrentWorkUrl, mockHttp);
 
             // Probe Throws
             mockHttp = new MockHttpMessageHandler();
@@ -55,7 +55,7 @@ namespace MTCClientTests
             ClientBuilder.AddHttpMessageHandler(ProbeEmptyContentUrl, mockHttp);
         }
 
-        public const string ProbeWorksUrl = "http://probe-works";
+        public const string ProbeAndCurrentWorkUrl = "http://probe-and-current-work";
         public const string ProbeThrowsUrl = "http://probe-throws";
         public const string ProbeNotFoundUrl = "http://probe-not-found";
         public const string ProbeNonSuccessUrl = "http://probe-400";

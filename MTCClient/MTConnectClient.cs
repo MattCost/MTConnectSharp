@@ -182,12 +182,12 @@ namespace MTConnectSharp
 
             var response = await _restClient.ExecuteAsync(request).ConfigureAwait(false);
 
-            if (response.ResponseStatus == ResponseStatus.Completed)
+            if (response.ResponseStatus != ResponseStatus.Completed)
             {
                 throw new GetCurrentStateFailedException($"get /current request failed to complete for {AgentUri}.");
             }
 
-            if (response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
                 throw new GetCurrentStateFailedException($"get /current request completed, but status code did not indicate success. Status Code: {response.StatusCode}");
             }
